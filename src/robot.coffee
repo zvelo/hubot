@@ -265,6 +265,7 @@ class Robot
       res.setHeader "X-Powered-By", @name
       next()
 
+    app.use express.logger()
     app.use express.basicAuth user, pass if user and pass
     app.use express.query()
     app.use express.json       verify: verifyHub
