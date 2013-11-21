@@ -248,6 +248,8 @@ class Robot
       signature = signature[1]
       secret = process.env.HUB_SECRET
 
+      throw new Error "Invalid Hub Signature" unless algo is "sha1"
+
       hmac = require("crypto")
         .createHmac(algo, secret)
         .update(buffer)
