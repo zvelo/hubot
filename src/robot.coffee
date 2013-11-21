@@ -227,6 +227,10 @@ class Robot
       @logger.error "Error loading scripts from npm package - #{err.stack}"
       process.exit(1)
 
+  requireHubSignature: (req, res, next) ->
+    return next new Error "Invalid Hub Signature" unless req.hubVerified
+    next()
+
   # Setup the Express server's defaults.
   #
   # Returns nothing.
@@ -235,12 +239,36 @@ class Robot
     pass    = process.env.EXPRESS_PASSWORD
     stat    = process.env.EXPRESS_STATIC
 
+    verifyHub = (req, res, buffer) ->
+      signature = req.header "x-hub-signature"
+      return unless signature
+
+      signature = signature.split '='
+      algo = signature[0]
+      signature = signature[1]
+      secret = process.env.HUB_SECRET
+
+      hmac = require("crypto")
+        .createHmac(algo, secret)
+        .update(buffer)
+        .digest("hex")
+
+      throw new Error "Invalid Hub Signature" unless hmac is signature
+
+      req.hubVerified = true
+
     express = require 'express'
 
     app = express()
+
+    app.use (req, res, next) =>
+      res.setHeader "X-Powered-By", @name
+      next()
+
     app.use express.basicAuth user, pass if user and pass
     app.use express.query()
-    app.use express.bodyParser()
+    app.use express.json       verify: verifyHub
+    app.use express.urlencoded verify: verifyHub
     app.use express.static stat if stat
 
     try
