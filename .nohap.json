@@ -1,0 +1,13 @@
+{
+    "github": {
+        "repo": "hubot"
+    },
+    "pivotal_tracker": {
+        "project": {
+            "id": 978432
+        }
+    },
+    "hipchat": {
+        "room": "NoHAP"
+    }
+}
