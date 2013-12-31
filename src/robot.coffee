@@ -282,14 +282,14 @@ class Robot
       algo      = signature[0]
       signature = signature[1]
 
-      throw new Error "Invalid Hub Signature" unless algo is "sha1"
+      return unless algo is "sha1"
 
       hmac = require("crypto")
         .createHmac(algo, secret)
         .update(buffer)
         .digest("hex")
 
-      throw new Error "Invalid Hub Signature" unless hmac is signature
+      return unless hmac is signature
 
       req.hubVerified = true
 
