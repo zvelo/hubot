@@ -261,6 +261,7 @@ class Robot
 
   requireHubSignature: (req, res, next) ->
     return next new Error "Invalid Hub Signature" unless req.hubVerified
+    @logger.debug "x-hub-signature verified"
     next()
 
   # Setup the Express server's defaults.
@@ -272,24 +273,28 @@ class Robot
     stat    = process.env.EXPRESS_STATIC
 
     verifyHub = (req, res, buffer) ->
-      secret = process.env.HUB_SECRET
-      return unless secret
-
+      secret    = process.env.HUB_SECRET
       signature = req.header "x-hub-signature"
-      return unless signature
+
+      ## the request could not be verified, but it's not an error
+      ## req.hubVerified will still be `undefined`
+      return unless secret and signature
 
       signature = signature.split '='
       algo      = signature[0]
       signature = signature[1]
 
-      return unless algo is "sha1"
+      ## connect.json.verify will catch any thrown errors and cause the request
+      ## to be rejected with 403 Forbidden
+
+      throw new Error "Invalid Hub Signature" unless algo is "sha1"
 
       hmac = require("crypto")
         .createHmac(algo, secret)
         .update(buffer)
         .digest("hex")
 
-      return unless hmac is signature
+      throw new Error "Invalid Hub Signature" unless hmac is signature
 
       req.hubVerified = true
 
