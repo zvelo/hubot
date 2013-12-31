@@ -272,13 +272,15 @@ class Robot
     stat    = process.env.EXPRESS_STATIC
 
     verifyHub = (req, res, buffer) ->
+      secret = process.env.HUB_SECRET
+      return unless secret
+
       signature = req.header "x-hub-signature"
       return unless signature
 
       signature = signature.split '='
-      algo = signature[0]
+      algo      = signature[0]
       signature = signature[1]
-      secret = process.env.HUB_SECRET
 
       throw new Error "Invalid Hub Signature" unless algo is "sha1"
 
