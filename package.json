@@ -18,17 +18,18 @@
     "url": "https://github.com/github/hubot/raw/master/LICENSE.md"
   }],
 
-  "repository" : {
+  "repository": {
     "type": "git",
     "url": "https://github.com/github/hubot.git"
   },
 
   "dependencies": {
-    "coffee-script":      "1.6.3",
-    "optparse":           "1.0.4",
-    "scoped-http-client": "0.9.8",
-    "log":                "1.4.0",
-    "express":            "3.4.4"
+    "coffee-script":      "1.x.x",
+    "optparse":           "1.x.x",
+    "scoped-http-client": "0.x.x",
+    "log":                "1.x.x",
+    "express":            "3.x.x",
+    "newrelic":           "1.x.x"
   },
 
   "engines": {
