@@ -28,8 +28,7 @@
     "optparse":           "1.x.x",
     "scoped-http-client": "0.x.x",
     "log":                "1.x.x",
-    "express":            "3.x.x",
-    "newrelic":           "1.x.x"
+    "express":            "3.x.x"
   },
 
   "engines": {
