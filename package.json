@@ -1,6 +1,6 @@
 {
   "name": "hubot",
-  "version": "2.11.0",
+  "version": "2.16.0",
   "author": "hubot",
   "keywords": [
     "github",
@@ -9,21 +9,28 @@
     "bot"
   ],
   "description": "A simple helpful robot for your Company",
-  "licenses": [{
-    "type": "MIT",
-    "url": "https://raw.github.com/github/hubot/master/LICENSE"
-  }],
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/github/hubot.git"
   },
   "dependencies": {
-    "coffee-script":      "1.x.x",
-    "optparse":           "1.x.x",
-    "scoped-http-client": "0.x.x",
-    "log":                "1.x.x",
-    "express":            "3.x.x",
-    "readline-history":   "1.x.x"
+    "async": "0.x.x",
+    "chalk": "1.x.x",
+    "cline": "0.x.x",
+    "coffee-script": "1.x.x",
+    "connect-multiparty": "1.x.x",
+    "express": "3.x.x",
+    "log": "1.x.x",
+    "optparse": "1.x.x",
+    "scoped-http-client": "0.x.x"
+  },
+  "devDependencies": {
+    "hubot-mock-adapter": "1.x.x",
+    "coffee-errors": "0.x.x",
+    "mocha": "2.x.x",
+    "mockery": "1.x.x",
+    "sinon-chai": "2.x.x"
   },
   "engines": {
     "node": ">= 0.8.x",
@@ -32,5 +39,8 @@
   "main": "./index",
   "bin": {
     "hubot": "./bin/hubot"
+  },
+  "scripts": {
+    "test": "./script/test"
   }
 }
