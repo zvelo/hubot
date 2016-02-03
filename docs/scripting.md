@@ -212,7 +212,7 @@ For those times that there isn't an API, there's always the possibility of scree
 
 ### Advanced HTTP and HTTPS settings
 
-As mentioned, hubot uses [node-scoped-http-client](https://github.com/technoweenie/node-scoped-http-client) to provide a simple interface for making HTTP and HTTP requests. Under its hood, it's using node's builtin [http](http://nodejs.org/api/http.html) and [https](http://nodejs.org/api/https.html) libraries, but providing an easy DSL for the most common kinds of interaction.
+As mentioned, hubot uses [node-scoped-http-client](https://github.com/technoweenie/node-scoped-http-client) to provide a simple interface for making HTTP and HTTPS requests. Under its hood, it's using node's builtin [http](http://nodejs.org/api/http.html) and [https](http://nodejs.org/api/https.html) libraries, but providing an easy DSL for the most common kinds of interaction.
 
 If you need to control options on http and https more directly, you pass a second argument to `robot.http` that will be passed on to node-scoped-http-client which will be passed on to http and https:
 
@@ -400,6 +400,7 @@ The most common use of this is for providing HTTP end points for services with w
 
 ```coffeescript
 module.exports = (robot) ->
+  # the expected value of :room is going to vary by adapter, it might be a numeric id, name, token, or some other value
   robot.router.post '/hubot/chatsecrets/:room', (req, res) ->
     room   = req.params.room
     data   = if req.body.payload? then JSON.parse req.body.payload else req.body
@@ -633,6 +634,10 @@ If you are using git, the generated directory includes a .gitignore, so you can 
 
 You now have a hubot script repository that's ready to roll! Feel free to crack open the pre-created `src/awesome-script.coffee` file and start building up your script! When you've got it ready, you can publish it to [npmjs](http://npmjs.org) by [following their documentation](https://docs.npmjs.com/getting-started/publishing-npm-packages)!
 
+You'll probably want to write some unit tests for your new script.  A sample test script is written to
+`test/awesome-script-test.coffee`, which you can run with `grunt`.  For more information on tests,
+see **Testing Hubot Scripts**.
+
 # Listener Metadata
 
 In addition to a regular expression and callback, the `hear` and `respond` functions also accept an optional options Object which can be used to attach arbitrary metadata to the generated Listener object. This metadata allows for easy extension of your script's behavior without modifying the script package.
@@ -658,21 +663,17 @@ These scoped identifiers allow you to externally specify new behaviors like:
 
 # Middleware
 
-There are two kinds of middleware: Receive middleware and Listener Middleware.
+There are three kinds of middleware: Receive, Listener and Response.
 
 Receive middleware runs once, before listeners are checked.
 Listener middleware runs for every listener that matches the message.
+Response middleware runs for every response sent to a message.
 
 ## Execution Process and API
 
-Similar to [Express middleware](http://expressjs.com/api.html#middleware), Hubot listener middleware executes middleware in definition order. Each middleware can either continue the chain (by calling `next`) or interrupt the chain (by calling `done`). If all middleware continues, the listener callback is executed and `done` is called. Middleware may wrap the `done` callback to allow executing code in the second half of the process (after the listener callback has been executed or a deeper piece of middleware has interrupted).
+Similar to [Express middleware](http://expressjs.com/api.html#middleware), Hubot executes middleware in definition order. Each middleware can either continue the chain (by calling `next`) or interrupt the chain (by calling `done`). If all middleware continues, the listener callback is executed and `done` is called. Middleware may wrap the `done` callback to allow executing code in the second half of the process (after the listener callback has been executed or a deeper piece of middleware has interrupted).
 
 Middleware is called with:
-
-- a context object containing:
-  - matching Listener object (with associated metadata)
-  - response object (contains the original message)
-- next/done callbacks.
 
 - `context`
   - See the each middleware type's API to see what the context will expose.
@@ -779,9 +780,15 @@ BLACKLISTED_USERS = [
 
 robot.receiveMiddleware (context, next, done) ->
   if context.response.message.user.id in BLACKLISTED_USERS
+    # Don't process this message further.
+    context.response.message.finish()
+
+    # If the message starts with 'hubot' or the alias pattern, this user was
+    # explicitly trying to run a command, so respond with an error message.
     if context.response.message.text?.match(robot.respondPattern(''))
       context.response.reply "I'm sorry @#{context.response.message.user.name}, but I'm configured to ignore your commands."
-    context.response.message.finish()
+
+    # Don't process further middleware.
     done()
   else
     next(done)
@@ -793,7 +800,115 @@ Receive middleware callbacks receive three arguments, `context`, `next`, and
 `done`. See the [middleware API](#execution-process-and-api) for a description
 of `next` and `done`. Receive middleware context includes these fields:
   - `response`
-    - all parts of the standard response API are included in the middleware API. See [Send & Reply](#send--reply).
+    - this response object will not have a `match` property, as no listeners have been run yet to match it.
     - middleware may decorate the response object with additional information (e.g. add a property to `response.message.user` with a user's LDAP groups)
     - middleware may modify the `response.message` object
-    - note: the textual message (`response.message.text`) should be considered immutable in listener middleware
+
+# Response Middleware
+
+Response middleware runs against every message hubot sends to a chat room. It's
+helpful for message formatting, preventing password leaks, metrics, and more.
+
+## Response Middleware Example
+
+This simple example changes the format of links sent to a chat room from
+markdown links (like [example](https://example.com)) to the format supported
+by [Slack](https://slack.com), <https://example.com|example>.
+
+```coffeescript
+module.exports = (robot) ->
+  robot.responseMiddleware (context, next, done) ->
+    return unless context.plaintext?
+    context.strings = (string.replace(/\[([^\[\]]*?)\]\((https?:\/\/.*?)\)/, "<$2|$1>") for string in context.strings)
+    next()
+```
+
+## Response Middleware API
+
+Response middleware callbacks receive three arguments, `context`, `next`, and
+`done`. See the [middleware API](#execution-process-and-api) for a description
+of `next` and `done`. Receive middleware context includes these fields:
+  - `response`
+    - This response object can be used to send new messages from the middleware. Middleware will be called on these new responses. Be careful not to create infinite loops.
+  - `strings`
+    - An array of strings being sent to the chat room adapter. You can edit these, or use `context.strings = ["new strings"]` to replace them.
+  - `method`
+    - A string representing which type of response message the listener sent, such as `send`, `reply`, `emote` or `topic`.
+  - `plaintext`
+    - `true` or `undefined`. This will be set to `true` if the message is of a normal plaintext type, such as `send` or `reply`. This property should be treated as read-only.
+
+# Testing Hubot Scripts
+
+[hubot-test-helper](https://github.com/mtsmfm/hubot-test-helper) is a good
+framework for unit testing Hubot scripts.  (Note that, in order to use
+hubot-test-helper, you'll need a recent Node version with support for Promises.)
+
+Install the package in your Hubot instance:
+
+``` % npm install hubot-test-helper --save-dev ```
+
+You'll also need to install:
+
+ * a JavaScript testing framework such as *Mocha*
+ * an assertion library such as *chai* or *expect.js*
+
+You may also want to install:
+
+ * *coffee-script* (if you're writing your tests in CoffeeScript rather than JavaScript)
+ * a mocking library such as *Sinon.js* (if your script performs webservice calls or
+   other asynchronous actions)
+
+Here is a sample script that tests the first couple of commands in the
+[Hubot sample script](https://github.com/github/generator-hubot/blob/master/generators/app/templates/scripts/example.coffee).  This script uses *Mocha*, *chai*, *coffee-script*, and of course *hubot-test-helper*:
+
+**test/example-test.coffee**
+```coffeescript
+Helper = require('hubot-test-helper')
+chai = require 'chai'
+
+expect = chai.expect
+
+helper = new Helper('../scripts/example.coffee')
+
+describe 'example script', ->
+  beforeEach ->
+    @room = helper.createRoom()
+
+  afterEach ->
+    @room.destroy()
+
+  it 'doesn\'t need badgers', ->
+    @room.user.say('alice', 'did someone call for a badger?').then =>
+      expect(@room.messages).to.eql [
+        ['alice', 'did someone call for a badger?']
+        ['hubot', 'Badgers? BADGERS? WE DON\'T NEED NO STINKIN BADGERS']
+      ]
+
+  it 'won\'t open the pod bay doors', ->
+    @room.user.say('bob', '@hubot open the pod bay doors').then =>
+      expect(@room.messages).to.eql [
+        ['bob', '@hubot open the pod bay doors']
+        ['hubot', '@bob I\'m afraid I can\'t let you do that.']
+      ]
+
+  it 'will open the dutch doors', ->
+    @room.user.say('bob', '@hubot open the dutch doors').then =>
+      expect(@room.messages).to.eql [
+        ['bob', '@hubot open the dutch doors']
+        ['hubot', '@bob Opening dutch doors']
+      ]
+```
+
+**sample output**
+```bash
+% mocha --compilers "coffee:coffee-script/register" test/*.coffee
+
+
+  example script
+    ✓ doesn't need badgers
+    ✓ won't open the pod bay doors
+    ✓ will open the dutch doors
+
+
+  3 passing (212ms)
+```

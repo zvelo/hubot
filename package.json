@@ -1,6 +1,6 @@
 {
   "name": "hubot",
-  "version": "2.16.0",
+  "version": "2.18.0",
   "author": "hubot",
   "keywords": [
     "github",
@@ -30,7 +30,9 @@
     "coffee-errors": "0.x.x",
     "mocha": "2.x.x",
     "mockery": "1.x.x",
-    "sinon-chai": "2.x.x"
+    "sinon-chai": "2.x.x",
+    "sinon": "1.x.x",
+    "chai": "2.x.x"
   },
   "engines": {
     "node": ">= 0.8.x",
