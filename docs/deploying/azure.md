@@ -35,17 +35,12 @@ First, run the follow command to add `deploy.cmd` to your hubot directory. This 
 Then, edit this file and look for the sections that give you steps 1, 2 and 3. You're going to add a 4th step:
 
     :: 4. Create Hubot file with a coffee extension
-    copy /Y “%DEPLOYMENT_TARGET%\node_modules\hubot\bin\hubot” “%DEPLOYMENT_TARGET%\node_modules\hubot\bin\hubot.coffee”
+    copy /Y "%DEPLOYMENT_TARGET%\node_modules\hubot\bin\hubot" "%DEPLOYMENT_TARGET%\node_modules\hubot\bin\hubot.coffee"
 
 Now, create a new file in the base directory of hubot called `server.js` and put these two lines into it:
 
     require('coffee-script/register');
     module.exports = require('hubot/bin/hubot.coffee');
-
-Save this file. Then open up `external-scripts.json` and remove the following two lines, as these two bits aren't compatible with Azure and then save the file.
-
-    "hubot-heroku-keepalive",
-    "hubot-redit-brain",
 
 Finally you will need to add the environment variables to the website to make sure it runs properly. You can either do it through the GUI (under configuration) or you can use the Azure PowerShell command line, as follows (example is showing slack as an adapter and mynewhubot as the website name).
 
@@ -59,13 +54,13 @@ Commit your changes in git and push to GitHub and Azure will automatically pick 
     % git commit -m "Add Azure settings for hubot"
     % git push
 
-Hubot now works just fine but doesn't have a brain. To add a brain that works with Azure, you will need to create an Azure storage account and account key. Then you can do the following in your base hubot directory.
+Azure offers a marketplace where you can use the default heroku-redis-brain using Redis Cloud provided by Redis Labs. Alternatively, to add an Azure storage brain, you will need to create an Azure storage account and account key. Then you can do the following in your base hubot directory.
 
     % npm install hubot-azure-scripts --save
 
 Then add the following line in `external-scripts.json` in the list with the other external scripts
 
-    "hubot-azure-scripts/brain/azure-blob-brain"
+    "hubot-azure-scripts/brain/storage-blob-brain"
 
 Finally, add two more environment variables to your website. You can do this either via the GUI or the following PowerShell commands.
 
@@ -75,3 +70,23 @@ Finally, add two more environment variables to your website. You can do this eit
     % Set-AzureWebsite -AppSettings $settings mynewhubot
 
 Now any scripts that require a brain will function. You should look up other scripts or write your own by looking at the [documentation](/docs/scripting.md). All of the normal scripts for hubot are compatible with hosting hubot on Azure.
+
+### Troubleshooting tips and tricks
+
+Due to Azure being Windows-based, you may run into path length problems. To overcome this issue you can set the environment variable `IN_PLACE_DEPLOYMENT` to `1` and use [custom deployment scripts to take advantage of NPM3](https://github.com/felixrieseberg/azure-npm3) and flat module installation.
+
+If using the free tier of Azure, you can also add a post-deployment step to ping the server on startup by setting the environment variable `POST_DEPLOYMENT_ACTION` with a script (relative to the src dir) such as `startup.sh`
+
+An example of a startup script:
+
+```
+let retrys=0
+while : ; do
+    STATUSCODE=$(curl --silent --output /dev/stderr --write-out "%{http_code}" https://${WEBSITE_SITE_NAME}.azurewebsites.net/heroku/keepalive)
+    echo $STATUSCODE
+    [[ $retrys -ne 5 ]] || break
+    echo $retrys
+    ((retrys++))
+    [[ $STATUSCODE -ne 200 ]] || break
+done
+```
