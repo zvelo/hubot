@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "async": "0.x.x",
+    "body-parser": "1.x.x",
     "chalk": "1.x.x",
     "cline": "0.x.x",
     "coffee-script": "1.x.x",
