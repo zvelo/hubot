@@ -409,7 +409,7 @@ class Robot
 
   requireHubSignature: (req, res, next) ->
     return next() if req.hubVerified
-    res.sendStatus 401
+    res.status(401).send "Unauthorized"
 
   # Setup the Express server's defaults.
   #
