@@ -460,7 +460,7 @@ class Robot
     app.use express.query()
 
     app.use bodyParser.json       verify: verifyHub
-    app.use bodyParser.urlencoded verify: verifyHub
+    app.use bodyParser.urlencoded {verify: verifyHub, extended: true}
     # replacement for deprecated express.multipart/connect.multipart
     # limit to 100mb, as per the old behavior
     app.use multipart(maxFilesSize: 100 * 1024 * 1024)
