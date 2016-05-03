@@ -433,17 +433,14 @@ class Robot
       algo      = signature[0]
       signature = signature[1]
 
-      ## connect.json.verify will catch any thrown errors and cause the request
-      ## to be rejected with 403 Forbidden
-
-      throw new Error "Invalid Hub Signature" unless algo is "sha1"
+      return unless algo is "sha1"
 
       hmac = require("crypto")
         .createHmac(algo, secret)
         .update(buffer)
         .digest("hex")
 
-      throw new Error "Invalid Hub Signature" unless hmac is signature
+      return unless hmac is signature
 
       req.hubVerified = true
 
@@ -460,7 +457,7 @@ class Robot
     app.use express.query()
 
     app.use bodyParser.json       verify: verifyHub
-    app.use bodyParser.urlencoded {verify: verifyHub, extended: true}
+    app.use bodyParser.urlencoded {verify: verifyHub, extended: false}
     # replacement for deprecated express.multipart/connect.multipart
     # limit to 100mb, as per the old behavior
     app.use multipart(maxFilesSize: 100 * 1024 * 1024)
