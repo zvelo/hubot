@@ -408,8 +408,8 @@ class Robot
       process.exit(1)
 
   requireHubSignature: (req, res, next) ->
-    return next new Error "Invalid Hub Signature" unless req.hubVerified
-    next()
+    return next() if req.hubVerified
+    res.sendStatus 401
 
   # Setup the Express server's defaults.
   #
